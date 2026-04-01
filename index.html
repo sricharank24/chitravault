@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <link rel="manifest" href="manifest.json">
+  <title>Chitravault</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f2f4f7;
+    margin: 0;
+  }
+
+  h1 {
+    text-align: center;
+    padding: 20px 0;
+    margin: 0;
+  }
+
+  .app-container {
+    max-width: 420px;
+    margin: auto;
+    padding: 10px;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 14px;
+    background: #1f2937;
+    color: white;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    border: none;
+  }
+
+  .btn:hover {
+    background: #374151;
+  }
+
+  .container {
+    display: none;
+    padding: 10px;
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+  }
+
+  .card {
+    background: white;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    text-align: left;
+  }
+
+  .card b {
+    font-size: 15px;
+  }
+
+  .delete-btn {
+    margin-top: 10px;
+    background: #ef4444;
+    padding: 8px;
+    border-radius: 8px;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+
+  #lockScreen {
+    max-width: 400px;
+    margin: 100px auto;
+    text-align: center;
+  }
+    </style>
+</head>
+
+<body>
+
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <h2>Enter PIN</h2>
+  <input id="pinInput" type="password" placeholder="Enter PIN"><br>
+
+  <div class="btn" onclick="checkPin()">Unlock</div>
+
+  <div id="setPinSection" style="display:none;">
+    <h3>Set New PIN</h3>
+    <input id="newPin" type="password" placeholder="Set PIN"><br>
+    <div class="btn" onclick="setPin()">Save PIN</div>
+  </div>
+</div>
+
+
+
+<div id="app" style="display:none;">
+
+      <div class="app-container"> 
+
+  <h1>Chitravault</h1>
+
+  <!-- HOME -->
+  <div id="home">
+    <div class="btn" onclick="showSection('insurance')">Insurance</div>
+    <div class="btn" onclick="showSection('investments')">Investments</div>
+    <div class="btn" onclick="showSection('emergency')">Emergency Note</div>
+  </div>
+
+  <!-- INSURANCE -->
+  <div id="insurance" class="container">
+    <h2>Insurance</h2>
+
+    <input id="company" placeholder="Company"><br>
+    <input id="policy" placeholder="Policy Number"><br>
+    <input id="nominee" placeholder="Nominee"><br>
+
+    <div class="btn" onclick="addItem('insurance', ['company','policy','nominee'])">Save</div>
+    <div class="btn" onclick="goHome()">Back</div>
+
+    <div id="insuranceList"></div>
+  </div>
+
+  <!-- INVESTMENTS -->
+  <div id="investments" class="container">
+    <h2>Investments</h2>
+
+    <input id="platform" placeholder="Platform"><br>
+    <input id="type" placeholder="Type"><br>
+    <input id="invNominee" placeholder="Nominee"><br>
+
+    <div class="btn" onclick="addItem('investments', ['platform','type','invNominee'])">Save</div>
+    <div class="btn" onclick="goHome()">Back</div>
+
+    <div id="investmentsList"></div>
+  </div>
+
+  <!-- EMERGENCY -->
+  <div id="emergency" class="container">
+    <h2>Emergency Note</h2>
+
+    <textarea id="emergencyText" rows="10" style="width:80%;"></textarea><br>
+
+    <div class="btn" onclick="saveEmergency()">Save</div>
+    <div class="btn" onclick="goHome()">Back</div>
+  </div>
+
+  </div>
+</div>
+
+<script>
+function checkPin() {
+  let savedPin = localStorage.getItem("appPin");
+  let enteredPin = document.getElementById("pinInput").value;
+
+  if (enteredPin === savedPin) {
+    unlockApp();
+  } else {
+    alert("Wrong PIN");
+  }
+}
+
+function setPin() {
+  let newPin = document.getElementById("newPin").value;
+  localStorage.setItem("appPin", newPin);
+  unlockApp();
+}
+
+function unlockApp() {
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+function hideAllSections() {
+  document.getElementById("insurance").style.display = "none";
+  document.getElementById("investments").style.display = "none";
+  document.getElementById("emergency").style.display = "none";
+}
+function showSection(section) {
+  document.getElementById("home").style.display = "none";
+  
+  hideAllSections(); 
+
+  document.getElementById(section).style.display = "block";
+
+  if (section === "insurance") {
+    loadItems("insurance", ["company","policy","nominee"]);
+  }
+
+  if (section === "investments") {
+    loadItems("investments", ["platform","type","invNominee"]);
+  }
+
+  if (section === "emergency") {
+    loadEmergency();
+  }
+}
+
+function goHome() {
+  hideAllSections(); // ✅ important
+  document.getElementById("home").style.display = "block";
+}
+
+function saveEmergency() {
+  let text = document.getElementById("emergencyText").value;
+  localStorage.setItem("emergencyNote", text);
+
+  alert("Saved ✅"); 
+}
+
+function loadEmergency() {
+  let text = localStorage.getItem("emergencyNote");
+  if (text !== null) {
+    document.getElementById("emergencyText").value = text;
+  }
+}
+
+// Items
+function addItem(section, fields) {
+  let data = JSON.parse(localStorage.getItem(section)) || [];
+
+  let newItem = {};
+  fields.forEach(f => {
+    newItem[f] = document.getElementById(f).value;
+    document.getElementById(f).value = "";
+  });
+
+  data.push(newItem);
+  localStorage.setItem(section, JSON.stringify(data));
+
+  loadItems(section, fields);
+}
+
+function loadItems(section, fields) {
+  let data = JSON.parse(localStorage.getItem(section)) || [];
+  let list = document.getElementById(section + "List");
+  list.innerHTML = "";
+
+  data.forEach((item, index) => {
+    let content = fields.map(f => `<b>${f}</b>: ${item[f]}`).join("<br>");
+
+    list.innerHTML += `
+      <div class="card">
+        ${content}<br><br>
+        <button class="delete-btn" onclick="deleteItem('${section}', ${index})">Delete</button>
+      </div>
+    `;
+  });
+}
+
+function deleteItem(section, index) {
+  let data = JSON.parse(localStorage.getItem(section)) || [];
+  data.splice(index, 1);
+  localStorage.setItem(section, JSON.stringify(data));
+
+  loadItems(section, Object.keys(data[0] || {}));
+}
+window.onload = function () {
+  let savedPin = localStorage.getItem("appPin");
+
+  if (!savedPin) {
+    // No PIN yet → show set PIN only
+    document.getElementById("setPinSection").style.display = "block";
+    document.getElementById("pinInput").style.display = "none";
+  } else {
+    // PIN exists → show enter PIN
+    document.getElementById("setPinSection").style.display = "none";
+    document.getElementById("pinInput").style.display = "block";
+  }
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("SW registered"));
+}
+
+};  
+</script>
+
+</body>
+</html>
