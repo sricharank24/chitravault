@@ -18,6 +18,17 @@
     margin: 0;
   }
 
+.header {
+  text-align: center;
+  padding: 20px 10px 10px;
+}
+
+.header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+  
   .app-container {
     max-width: 420px;
     margin: auto;
@@ -36,6 +47,18 @@
     font-weight: 500;
     border: none;
   }
+
+.card-btn {
+  background: white;
+  padding: 16px;
+  margin: 10px 0;
+  border-radius: 14px;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+}
 
   .btn:hover {
     background: #374151;
@@ -109,22 +132,44 @@
 
       <div class="app-container"> 
 
+  <div class="header">
   <h1>Chitravault</h1>
+  <p>Your personal financial vault</p>
+</div>
 
   <!-- HOME -->
   <div id="home">
-    <div class="btn" onclick="showSection('insurance')">Insurance</div>
-    <div class="btn" onclick="showSection('investments')">Investments</div>
-    <div class="btn" onclick="showSection('emergency')">Emergency Note</div>
+    <div class="card-btn" onclick="showSection('insurance')">
+    🛡️ Insurance
+  </div>
+    <div class="card-btn" onclick="showSection('investments')">
+    📈 Investments
+  </div>
+    <div class="card-btn" onclick="showSection('emergency')">
+    🚨 Emergency Note
+  </div>
+    <div class="card-btn" onclick="exportData()">
+    📤 Export Backup
+  </div>
+    <div class="card-btn" onclick="document.getElementById('fileInput').click()">
+    📥 Import Backup
+  </div>
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importData(event)">
   </div>
 
   <!-- INSURANCE -->
   <div id="insurance" class="container">
     <h2>Insurance</h2>
 
-    <input id="company" placeholder="Company"><br>
-    <input id="policy" placeholder="Policy Number"><br>
-    <input id="nominee" placeholder="Nominee"><br>
+    
+    <label>Company</label>
+    <input id="company">
+
+    <label>Policy Number</label>
+    <input id="policy">
+
+    <label>Nominee</label>
+    <input id="nominee">
 
     <div class="btn" onclick="addItem('insurance', ['company','policy','nominee'])">Save</div>
     <div class="btn" onclick="goHome()">Back</div>
@@ -136,9 +181,14 @@
   <div id="investments" class="container">
     <h2>Investments</h2>
 
-    <input id="platform" placeholder="Platform"><br>
-    <input id="type" placeholder="Type"><br>
-    <input id="invNominee" placeholder="Nominee"><br>
+    <label>Platform</label>
+    <input id="platform">
+
+    <label>Type</label>
+    <input id="type">
+
+    <label>Nominee</label>
+    <input id="invNominee">
 
     <div class="btn" onclick="addItem('investments', ['platform','type','invNominee'])">Save</div>
     <div class="btn" onclick="goHome()">Back</div>
@@ -160,6 +210,21 @@
 </div>
 
 <script>
+
+document.addEventListener("visibilitychange", function () {
+  if (document.hidden) {
+    lockApp();
+  }
+});
+
+function lockApp() {
+  document.getElementById("app").style.display = "none";
+  document.getElementById("lockScreen").style.display = "block";
+
+  // Clear entered PIN
+  document.getElementById("pinInput").value = "";
+}
+
 function checkPin() {
   let savedPin = localStorage.getItem("appPin");
   let enteredPin = document.getElementById("pinInput").value;
@@ -248,15 +313,65 @@ function loadItems(section, fields) {
   list.innerHTML = "";
 
   data.forEach((item, index) => {
-    let content = fields.map(f => `<b>${f}</b>: ${item[f]}`).join("<br>");
+    let content = `
+    <div><b>${item[fields[0]] || ""}</b></div>
+    <div style="color:#6b7280; font-size:13px;">
+        ${fields.slice(1).map(f => item[f]).join(" • ")}
+    </div>
+    `;
 
-    list.innerHTML += `
-      <div class="card">
-        ${content}<br><br>
+   list.innerHTML += `
+    <div class="card">
+        ${content}
         <button class="delete-btn" onclick="deleteItem('${section}', ${index})">Delete</button>
-      </div>
+    </div>
     `;
   });
+}
+function exportData() {
+  let data = {
+    insurance: JSON.parse(localStorage.getItem("insurance")) || [],
+    investments: JSON.parse(localStorage.getItem("investments")) || [],
+    emergency: localStorage.getItem("emergencyNote") || ""
+  };
+
+  let json = JSON.stringify(data, null, 2);
+
+  let blob = new Blob([json], { type: "application/json" });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "chitravault-backup.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  let file = event.target.files[0];
+
+  if (!file) return;
+
+  let reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      let data = JSON.parse(e.target.result);
+
+      // Restore data
+      localStorage.setItem("insurance", JSON.stringify(data.insurance || []));
+      localStorage.setItem("investments", JSON.stringify(data.investments || []));
+      localStorage.setItem("emergencyNote", data.emergency || "");
+
+      alert("Backup restored successfully ✅");
+
+    } catch (err) {
+      alert("Invalid backup file ❌");
+    }
+  };
+
+  reader.readAsText(file);
 }
 
 function deleteItem(section, index) {
