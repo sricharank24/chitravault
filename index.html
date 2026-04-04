@@ -148,6 +148,12 @@
     <div class="card-btn" onclick="showSection('emergency')">
     🚨 Emergency Note
   </div>
+  <div class="card-btn" onclick="showSection('changePin')">
+  🔐 Change PIN
+    </div>
+    <div class="card-btn" onclick="showSection('trusted')">
+  👤 Trusted Contact
+    </div>
     <div class="card-btn" onclick="exportData()">
     📤 Export Backup
   </div>
@@ -197,14 +203,83 @@
   </div>
 
   <!-- EMERGENCY -->
-  <div id="emergency" class="container">
-    <h2>Emergency Note</h2>
+<div id="emergency" class="container">
+  <h2 class="section-title">Emergency Plan</h2>
 
-    <textarea id="emergencyText" rows="10" style="width:80%;"></textarea><br>
+  <!-- ✅ FORM START -->
+  <div id="emergencyForm">
 
-    <div class="btn" onclick="saveEmergency()">Save</div>
-    <div class="btn" onclick="goHome()">Back</div>
+    <label>Step 1: Who should be contacted first?</label>
+    <input id="emgContact">
+
+    <label>Step 2: Where are passwords stored?</label>
+    <input id="emgPasswords">
+
+    <label>Step 3: Insurance handling</label>
+    <input id="emgInsurance">
+
+    <label>Step 4: Where are investments?</label>
+    <input id="emgInvestments">
+
+    <label>Step 5: Where are important documents stored?</label>
+    <input id="emgDocs">
+
+    <label>Step 6: Advisor / CA</label>
+    <input id="emgAdvisor">
+
+    <button class="btn primary" onclick="saveEmergency()">Save</button>
+
   </div>
+  <!-- ✅ FORM END -->
+
+  <button class="btn secondary" onclick="goHome()">Back</button>
+
+  <div id="emergencyDisplay"></div>
+</div>
+
+  <!--change pin -->
+<div id="changePin" class="container">
+    <h2 class="section-title">Change PIN</h2>
+
+    <label>Current PIN</label>
+    <input id="currentPin" type="password">
+
+    <label>New PIN</label>
+    <input id="newPinChange" type="password">
+
+    <button class="btn primary" onclick="changePin()">Update PIN</button>
+    <button class="btn secondary" onclick="goHome()">Back</button>
+</div>
+
+<!--Trusted Contact -->
+<div id="trusted" class="container">
+  <h2 class="section-title">Trusted Contacts</h2>
+
+  <!-- ADD BUTTON -->
+  <button class="btn primary" onclick="toggleTrustedForm()">+ Add Contact</button>
+
+  <!-- FORM -->
+  <div id="trustedForm" style="display:none;">
+    <label>Name</label>
+    <input id="tcName">
+
+    <label>Phone</label>
+    <input id="tcPhone">
+
+    <label>Relationship</label>
+    <input id="tcRelation">
+
+    <label>Notes</label>
+    <input id="tcNotes">
+
+    <button class="btn primary" onclick="addTrusted()">Save</button>
+  </div>
+
+  <!-- LIST -->
+  <div id="trustedList"></div>
+
+  <button class="btn secondary" onclick="goHome()">Back</button>
+</div>
 
   </div>
 </div>
@@ -242,6 +317,33 @@ function setPin() {
   unlockApp();
 }
 
+function changePin() {
+  let current = document.getElementById("currentPin").value;
+  let newPin = document.getElementById("newPinChange").value;
+
+  let savedPin = localStorage.getItem("appPin");
+
+  if (current !== savedPin) {
+    alert("Current PIN is incorrect ❌");
+    return;
+  }
+
+  if (!newPin || newPin.length < 4) {
+    alert("New PIN must be at least 4 digits");
+    return;
+  }
+
+  localStorage.setItem("appPin", newPin);
+
+  alert("PIN updated successfully ✅");
+
+  // clear fields
+  document.getElementById("currentPin").value = "";
+  document.getElementById("newPinChange").value = "";
+
+  goHome();
+}
+
 function unlockApp() {
   document.getElementById("lockScreen").style.display = "none";
   document.getElementById("app").style.display = "block";
@@ -251,6 +353,8 @@ function hideAllSections() {
   document.getElementById("insurance").style.display = "none";
   document.getElementById("investments").style.display = "none";
   document.getElementById("emergency").style.display = "none";
+  document.getElementById("changePin").style.display = "none";
+  document.getElementById("trusted").style.display = "none"; 
 }
 function showSection(section) {
   document.getElementById("home").style.display = "none";
@@ -270,25 +374,83 @@ function showSection(section) {
   if (section === "emergency") {
     loadEmergency();
   }
+    if (section === "trusted") {
+    loadTrustedList();
+    }
 }
-
 function goHome() {
   hideAllSections(); // ✅ important
   document.getElementById("home").style.display = "block";
 }
 
 function saveEmergency() {
-  let text = document.getElementById("emergencyText").value;
-  localStorage.setItem("emergencyNote", text);
+  let data = {
+    contact: document.getElementById("emgContact").value,
+    passwords: document.getElementById("emgPasswords").value,
+    insurance: document.getElementById("emgInsurance").value,
+    docs: document.getElementById("emgDocs").value,
+    advisor: document.getElementById("emgAdvisor").value,
+    investments: document.getElementById("emgInvestments").value
+  };
 
-  alert("Saved ✅"); 
+  localStorage.setItem("emergencyPlan", JSON.stringify(data));
+
+  // clear fields
+  document.getElementById("emgContact").value = "";
+  document.getElementById("emgPasswords").value = "";
+  document.getElementById("emgInsurance").value = "";
+  document.getElementById("emgDocs").value = "";
+  document.getElementById("emgAdvisor").value = "";
+  document.getElementById("emgInvestments").value = "";
+
+  // hide form after save
+  document.getElementById("emergencyForm").style.display = "none";
+
+  loadEmergency();
 }
 
+
 function loadEmergency() {
-  let text = localStorage.getItem("emergencyNote");
-  if (text !== null) {
-    document.getElementById("emergencyText").value = text;
+  let data = JSON.parse(localStorage.getItem("emergencyPlan"));
+
+  let form = document.getElementById("emergencyForm");
+  let display = document.getElementById("emergencyDisplay");
+
+  // 👉 If NO data → show form
+  if (!data) {
+    form.style.display = "block";
+    display.innerHTML = "";
+    return;
   }
+
+  // 👉 If data exists → hide form
+  form.style.display = "none";
+
+  // show saved data
+  display.innerHTML = `
+    <div class="card">
+      <b>1. Contact:</b> ${data.contact}<br>
+      <b>2. Passwords:</b> ${data.passwords}<br>
+      <b>3. Insurance:</b> ${data.insurance}<br>
+      <b>4. Investments:</b> ${data.investments}<br>
+      <b>5. Documents:</b> ${data.docs}<br>
+      <b>6. Advisor:</b> ${data.advisor}<br><br>
+      
+      <button class="btn secondary" onclick="editEmergency()">Edit</button>
+    </div>
+  `;
+
+  // prefill inputs (for edit)
+  document.getElementById("emgContact").value = data.contact || "";
+  document.getElementById("emgPasswords").value = data.passwords || "";
+  document.getElementById("emgInsurance").value = data.insurance || "";
+  document.getElementById("emgInvestments").value = data.investments || "";
+  document.getElementById("emgDocs").value = data.docs || "";
+  document.getElementById("emgAdvisor").value = data.advisor || "";
+}
+
+function editEmergency() {
+  document.getElementById("emergencyForm").style.display = "block";
 }
 
 // Items
@@ -328,6 +490,82 @@ function loadItems(section, fields) {
     `;
   });
 }
+
+function toggleTrustedForm() {
+  let form = document.getElementById("trustedForm");
+  form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+function addTrusted() {
+  let data = JSON.parse(localStorage.getItem("trustedContacts")) || [];
+
+  let newContact = {
+    name: document.getElementById("tcName").value,
+    phone: document.getElementById("tcPhone").value,
+    relation: document.getElementById("tcRelation").value,
+    notes: document.getElementById("tcNotes").value
+  };
+
+  data.push(newContact);
+  localStorage.setItem("trustedContacts", JSON.stringify(data));
+
+  // clear inputs
+  document.getElementById("tcName").value = "";
+  document.getElementById("tcPhone").value = "";
+  document.getElementById("tcRelation").value = "";
+  document.getElementById("tcNotes").value = "";
+
+  document.getElementById("trustedForm").style.display = "none";
+
+  loadTrustedList();
+}
+
+function loadTrustedList() {
+  let data = JSON.parse(localStorage.getItem("trustedContacts")) || [];
+  let list = document.getElementById("trustedList");
+
+  list.innerHTML = "";
+
+  data.forEach((item, index) => {
+    list.innerHTML += `
+      <div class="card">
+        <b>${item.name}</b><br>
+        ${item.relation} • ${item.phone}<br>
+        <span style="color:#6b7280">${item.notes}</span><br>
+        <button class="delete-btn" onclick="deleteTrusted(${index})">Delete</button>
+      </div>
+    `;
+  });
+}
+
+function deleteTrusted(index) {
+  let data = JSON.parse(localStorage.getItem("trustedContacts")) || [];
+  data.splice(index, 1);
+  localStorage.setItem("trustedContacts", JSON.stringify(data));
+  loadTrustedList();
+}
+
+function loadTrusted() {
+  let data = JSON.parse(localStorage.getItem("trustedContact"));
+
+  if (!data) return;
+
+  document.getElementById("trustedDisplay").innerHTML = `
+    <div class="card">
+      <b>${data.name}</b><br>
+      ${data.relation}<br>
+      ${data.phone}<br>
+      <span style="color:#6b7280">${data.notes}</span>
+    </div>
+  `;
+
+  // prefill inputs (edit mode)
+  document.getElementById("tcName").value = data.name || "";
+  document.getElementById("tcPhone").value = data.phone || "";
+  document.getElementById("tcRelation").value = data.relation || "";
+  document.getElementById("tcNotes").value = data.notes || "";
+}
+
 function exportData() {
   let data = {
     insurance: JSON.parse(localStorage.getItem("insurance")) || [],
